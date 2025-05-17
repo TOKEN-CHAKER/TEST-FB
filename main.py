@@ -27,7 +27,7 @@ HTML_FORM = """
 </html>
 """
 
-# HTML to list messenger groups with name + photo inline
+# HTML to list messenger groups
 HTML_GROUPS = """
 <!DOCTYPE html>
 <html>
@@ -104,8 +104,16 @@ HTML_MESSAGES = """
     <title>Group Messages</title>
     <style>
         body { font-family: Arial; background: #f0f2f5; padding: 40px; }
+        .scroll-box {
+            max-height: 200vh;
+            overflow-y: auto;
+            border: 1px solid #ccc;
+            border-radius: 10px;
+            padding: 20px;
+            background: #ffffff;
+        }
         .msg {
-            background: white;
+            background: #fff;
             border-radius: 8px;
             padding: 12px;
             margin-bottom: 10px;
@@ -122,6 +130,7 @@ HTML_MESSAGES = """
         .meta {
             font-size: 12px;
             color: #666;
+            margin-top: 4px;
         }
         .content {
             flex: 1;
@@ -133,15 +142,17 @@ HTML_MESSAGES = """
 </head>
 <body>
     <h2>Group Messages</h2>
-    {% for m in messages %}
-        <div class="msg">
-            <img src="https://graph.facebook.com/{{ m.from.id if m.from else '0' }}/picture?type=normal" alt="DP">
-            <div class="content">
-                <strong>{{ m.from.name if m.from else 'Unknown' }} ({{ m.from.id if m.from else 'N/A' }})</strong>: {{ m.message|default('[No Text]') }}
-                <div class="meta">{{ m.created_time }}</div>
+    <div class="scroll-box">
+        {% for m in messages %}
+            <div class="msg">
+                <img src="https://graph.facebook.com/{{ m.from.id if m.from else '0' }}/picture?type=normal" alt="DP">
+                <div class="content">
+                    <strong>{{ m.from.name if m.from else 'Unknown' }} ({{ m.from.id if m.from else 'N/A' }})</strong>: {{ m.message|default('[No Text]') }}
+                    <div class="meta">{{ m.created_time }}</div>
+                </div>
             </div>
-        </div>
-    {% endfor %}
+        {% endfor %}
+    </div>
 </body>
 </html>
 """
