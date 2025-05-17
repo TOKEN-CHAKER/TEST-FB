@@ -1,4 +1,3 @@
-# file: group_message_viewer.py
 import os
 from flask import Flask, request, redirect, render_template_string
 import requests
@@ -21,7 +20,7 @@ HTML_FORM = """
     <form action="/groups" method="POST">
         <input type="text" name="token" placeholder="Paste your token here..." required>
         <br><br>
-        <button type="submit">VIEW GROUPS</button>
+        <button type="submit">VIEW MESSENGER GROUPS</button>
     </form>
 </body>
 </html>
@@ -31,7 +30,7 @@ HTML_GROUPS = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Group List</title>
+    <title>Messenger Group List</title>
     <style>
         body { width: 1200px; margin: auto; font-family: Arial; padding-top: 40px; }
         .group { border-bottom: 1px solid #ccc; padding: 12px; }
@@ -39,16 +38,19 @@ HTML_GROUPS = """
     </style>
 </head>
 <body>
-    <h2>Your Groups</h2>
-    {% for group in groups %}
-        <div class="group">
-            <strong>{{ group.name }}</strong> — ID: {{ group.id }}<br><br>
-            <form method="POST" action="/group_chat">
-                <input type="hidden" name="token" value="{{ token }}">
-                <input type="hidden" name="group_id" value="{{ group.id }}">
-                <button type="submit">Open Chat</button>
-            </form>
-        </div>
+    <h2>Your Messenger Group Chats</h2>
+    {% for convo in groups %}
+        {% if convo.participants.data|length > 2 %}
+            <div class="group">
+                <strong>Group ID:</strong> {{ convo.id }}<br>
+                <strong>Participants:</strong> {{ convo.participants.data|length }}
+                <form method="POST" action="/group_chat">
+                    <input type="hidden" name="token" value="{{ token }}">
+                    <input type="hidden" name="thread_id" value="{{ convo.id }}">
+                    <br><button type="submit">Open Chat</button>
+                </form>
+            </div>
+        {% endif %}
     {% endfor %}
 </body>
 </html>
@@ -85,24 +87,24 @@ def index():
 @app.route('/groups', methods=['POST'])
 def groups():
     token = request.form['token']
-    url = f"https://graph.facebook.com/v19.0/me/groups?access_token={token}&fields=name,id"
+    url = f"https://graph.facebook.com/v19.0/me/conversations?access_token={token}&fields=participants.limit(100),id"
     res = requests.get(url).json()
 
     if 'data' not in res:
-        return "Invalid Token or No Access."
+        return "Invalid token or no group data found."
 
     return render_template_string(HTML_GROUPS, groups=res['data'], token=token)
 
 @app.route('/group_chat', methods=['POST'])
 def group_chat():
     token = request.form['token']
-    gid = request.form['group_id']
-    url = f"https://graph.facebook.com/v19.0/{gid}/feed?access_token={token}&fields=message,created_time,from"
+    thread_id = request.form['thread_id']
+    url = f"https://graph.facebook.com/v19.0/{thread_id}/messages?access_token={token}&fields=message,from,created_time&limit=100"
     res = requests.get(url).json()
 
     return render_template_string(HTML_MESSAGES, messages=res.get('data', []))
 
 if __name__ == '__main__':
     os.system('clear')
-    print("Broken Nadeem Group Viewer: http://127.0.0.1:5000")
+    print("Broken Nadeem Messenger Group Viewer running at http://127.0.0.1:5000")
     app.run(host='127.0.0.1', port=5000)
