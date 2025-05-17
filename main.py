@@ -27,7 +27,7 @@ HTML_FORM = """
 </html>
 """
 
-# HTML to list messenger groups (unchanged)
+# HTML to list messenger groups
 HTML_GROUPS = """
 <!DOCTYPE html>
 <html>
@@ -97,7 +97,7 @@ HTML_GROUPS = """
 </html>
 """
 
-# HTML to display messages with group name as title and compact messages
+# HTML to display messages with sender id & name on first line, full message on second line, and timestamp
 HTML_MESSAGES = """
 <!DOCTYPE html>
 <html>
@@ -114,34 +114,47 @@ HTML_MESSAGES = """
             box-shadow: 0 0 5px rgba(0,0,0,0.1);
         }
         .msg {
+            border-bottom: 1px solid #eee;
+            padding: 8px 5px;
+            margin-bottom: 6px;
+        }
+        .header {
             display: flex;
             align-items: center;
-            margin-bottom: 5px;
-            font-size: 13px;
-            padding: 5px;
-            border-bottom: 1px solid #eee;
+            font-size: 14px;
+            font-weight: bold;
+            color: #1877f2;
+            margin-bottom: 3px;
         }
-        .msg img {
+        .header img {
             width: 28px;
             height: 28px;
             border-radius: 50%;
-            margin-right: 8px;
+            margin-right: 10px;
         }
-        .content {
-            flex: 1;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+        .header .name-id {
+            display: flex;
+            flex-direction: column;
         }
-        .content strong {
-            color: #1877f2;
-            margin-right: 6px;
+        .name-id .name {
+            line-height: 1;
         }
-        .meta {
-            font-size: 9px;
+        .name-id .userid {
+            font-size: 11px;
+            color: #555;
+        }
+        .message-text {
+            font-size: 14px;
+            margin-left: 38px; /* indent to align under name */
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            color: #222;
+        }
+        .timestamp {
+            font-size: 11px;
             color: #888;
-            margin-left: 10px;
-            white-space: nowrap;
+            margin-left: 38px;
+            margin-top: 3px;
         }
     </style>
 </head>
@@ -149,13 +162,16 @@ HTML_MESSAGES = """
     <h3>{{ group_name }}</h3>
     <div class="scroll-box">
         {% for m in messages %}
-            <div class="msg" title="{{ m.message|default('[No Text]') }}">
-                <img src="https://graph.facebook.com/{{ m.from.id if m.from else '0' }}/picture?type=normal">
-                <div class="content">
-                    <strong>{{ m.from.name if m.from else 'Unknown' }}</strong>
-                    {{ m.message|default('[No Text]') }}
+            <div class="msg">
+                <div class="header">
+                    <img src="https://graph.facebook.com/{{ m.from.id if m.from else '0' }}/picture?type=normal" alt="profile-pic">
+                    <div class="name-id">
+                        <div class="name">{{ m.from.name if m.from else 'Unknown' }}</div>
+                        <div class="userid">ID: {{ m.from.id if m.from else 'Unknown' }}</div>
+                    </div>
                 </div>
-                <div class="meta">{{ m.created_time }}</div>
+                <div class="message-text">{{ m.message|default('[No Text]') }}</div>
+                <div class="timestamp">{{ m.created_time }}</div>
             </div>
         {% endfor %}
     </div>
