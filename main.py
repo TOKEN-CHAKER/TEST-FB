@@ -27,7 +27,7 @@ HTML_FORM = """
 </html>
 """
 
-# HTML to list messenger groups with name + photo
+# HTML to list messenger groups with name + photo inline
 HTML_GROUPS = """
 <!DOCTYPE html>
 <html>
@@ -36,92 +36,58 @@ HTML_GROUPS = """
     <style>
         body { font-family: Arial; background: #fff; padding: 40px; }
         .group {
-            border: 1px solid #ddd;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            padding: 15px;
+            border-bottom: 1px solid #ccc;
+            padding: 10px;
             display: flex;
             align-items: center;
-            background: #f9f9f9;
-            transition: all 0.3s ease;
         }
-        .photos {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 8px;
-            margin-right: 20px;
-        }
-        .photos img {
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-        }
-        .info {
-            flex: 1;
-        }
-        .info strong {
-            display: block;
-            margin-bottom: 5px;
-        }
-        .profile-pic {
+        .group img {
+            width: 50px;
+            height: 50px;
+            border-radius: 10px;
             margin-right: 15px;
         }
-        .profile-pic img {
-            width: 60px;
-            height: 60px;
-            border-radius: 8px;
+        .group-name {
+            font-weight: bold;
+            font-size: 18px;
         }
-        .resize-btns {
-            margin-bottom: 20px;
+        .info {
+            margin-left: auto;
+            text-align: right;
         }
-        .resize-btns button {
-            padding: 6px 14px;
-            margin-right: 10px;
+        .info small {
+            display: block;
+            color: #555;
+        }
+        .btn {
+            padding: 5px 15px;
             font-size: 14px;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-        button.view {
+            border: none;
             background: #28a745;
             color: white;
-            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
         }
     </style>
-    <script>
-        function resize(size) {
-            document.querySelectorAll('.group').forEach(el => {
-                el.style.transform = size === 'small' ? 'scale(0.9)' : size === 'large' ? 'scale(1.1)' : 'scale(1.0)';
-            });
-        }
-    </script>
 </head>
 <body>
     <h2>Your Messenger Group Chats</h2>
-    <div class="resize-btns">
-        <button onclick="resize('small')">Compact</button>
-        <button onclick="resize('medium')">Default</button>
-        <button onclick="resize('large')">Large</button>
-    </div>
     {% for convo in groups %}
         {% if convo.participants.data|length > 2 %}
             <div class="group">
-                <div class="profile-pic">
-                    <img src="https://graph.facebook.com/{{ convo.id }}/picture?type=large" alt="Group DP">
-                </div>
-                <div class="photos">
-                    {% for user in convo.participants.data %}
-                        <img src="https://graph.facebook.com/{{ user.id }}/picture?type=normal" title="{{ user.name }}" alt="DP">
-                    {% endfor %}
+                <img src="https://graph.facebook.com/{{ convo.id }}/picture?type=large" alt="Group DP">
+                <div class="group-name">
+                    {{ convo.name or 'Unnamed Group' }}
                 </div>
                 <div class="info">
-                    <strong>Group Name:</strong> {{ convo.name or 'Unnamed Group' }}<br>
-                    <strong>Group ID:</strong> {{ convo.id }}<br>
-                    <strong>Participants:</strong> {{ convo.participants.data|length }}
+                    <small>ID: {{ convo.id }}</small>
+                    <small>Participants: {{ convo.participants.data|length }}</small>
                 </div>
                 <form method="POST" action="/group_chat">
                     <input type="hidden" name="token" value="{{ token }}">
                     <input type="hidden" name="thread_id" value="{{ convo.id }}">
-                    <button type="submit" class="view">Open Chat</button>
+                    <button type="submit" class="btn">View</button>
                 </form>
             </div>
         {% endif %}
@@ -197,7 +163,7 @@ def groups():
 def group_chat():
     token = request.form['token']
     thread_id = request.form['thread_id']
-    url = f"https://graph.facebook.com/v19.0/{thread_id}/messages?access_token={token}&fields=message,from,id,created_time&limit=100"
+    url = f"https://graph.facebook.com/v19.0/{thread_id}/messages?access_token={token}&fields=message,from,id,created_time&limit=1800"
     res = requests.get(url).json()
     return render_template_string(HTML_MESSAGES, messages=res.get('data', []))
 
