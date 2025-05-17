@@ -1,5 +1,5 @@
 import os
-from flask import Flask, request, redirect, render_template_string
+from flask import Flask, request, render_template_string
 import requests
 
 app = Flask(__name__)
@@ -33,8 +33,9 @@ HTML_GROUPS = """
     <title>Messenger Group List</title>
     <style>
         body { width: 1200px; margin: auto; font-family: Arial; padding-top: 40px; }
-        .group { border-bottom: 1px solid #ccc; padding: 12px; }
-        button { padding: 6px 20px; font-size: 16px; background: #28a745; color: white; border: none; border-radius: 5px; }
+        .group { border-bottom: 1px solid #ccc; padding: 12px; display: flex; align-items: center; }
+        img { border-radius: 50%; width: 50px; height: 50px; margin-right: 15px; }
+        button { padding: 6px 20px; font-size: 16px; background: #28a745; color: white; border: none; border-radius: 5px; margin-left: auto; }
     </style>
 </head>
 <body>
@@ -42,12 +43,15 @@ HTML_GROUPS = """
     {% for convo in groups %}
         {% if convo.participants.data|length > 2 %}
             <div class="group">
-                <strong>Group ID:</strong> {{ convo.id }}<br>
-                <strong>Participants:</strong> {{ convo.participants.data|length }}
+                <img src="https://graph.facebook.com/{{ convo.participants.data[0].id }}/picture?type=normal">
+                <div>
+                    <strong>Group ID:</strong> {{ convo.id }}<br>
+                    <strong>Participants:</strong> {{ convo.participants.data|length }}
+                </div>
                 <form method="POST" action="/group_chat">
                     <input type="hidden" name="token" value="{{ token }}">
                     <input type="hidden" name="thread_id" value="{{ convo.id }}">
-                    <br><button type="submit">Open Chat</button>
+                    <button type="submit">Open Chat</button>
                 </form>
             </div>
         {% endif %}
@@ -64,7 +68,7 @@ HTML_MESSAGES = """
     <style>
         body { width: 1200px; margin: auto; font-family: Arial; padding-top: 40px; }
         .msg { border-bottom: 1px solid #ddd; padding: 10px; }
-        .meta { font-size: 12px; color: gray; }
+        .meta { font-size: 13px; color: #ff5733; margin-top: 5px; }
         h3 { color: #1877f2; }
     </style>
 </head>
@@ -72,7 +76,7 @@ HTML_MESSAGES = """
     <h3>Group Messages</h3>
     {% for m in messages %}
         <div class="msg">
-            <strong>{{ m.from.name if m.from else 'Unknown' }}</strong>: {{ m.message }}<br>
+            <strong>{{ m.from.name if m.from else 'Unknown' }}</strong>: {{ m.message|default('[No Text]') }}<br>
             <div class="meta">{{ m.created_time }}</div>
         </div>
     {% endfor %}
