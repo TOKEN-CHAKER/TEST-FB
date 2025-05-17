@@ -4,35 +4,38 @@ import requests
 
 app = Flask(__name__)
 
-# Home Page Token Input
-HTML_FORM = """
+# Initial choice menu
+HTML_MENU = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Enter Access Token</title>
+    <title>Select Chat Type</title>
     <style>
-        body { font-family: Arial; background: #f0f2f5; text-align: center; padding-top: 100px; }
-        input { width: 60%; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; }
+        body { font-family: Arial, sans-serif; background: #f0f2f5; text-align: center; padding-top: 100px; }
+        input, select { width: 60%; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; }
         button { margin-top: 20px; padding: 10px 30px; font-size: 18px; background: #1877f2; color: white; border: none; border-radius: 6px; cursor: pointer; }
     </style>
 </head>
 <body>
-    <h2>Enter Your Facebook Access Token</h2>
-    <form action="/groups" method="POST">
-        <input type="text" name="token" placeholder="Paste your access token..." required>
-        <br>
-        <button type="submit">View Messenger Groups</button>
+    <h2>Choose Messenger Type</h2>
+    <form action="/conversations" method="POST">
+        <input type="text" name="token" placeholder="Enter your Facebook Access Token" required><br><br>
+        <select name="type">
+            <option value="group">Group Messages</option>
+            <option value="id">Personal ID Messages</option>
+        </select><br>
+        <button type="submit">Continue</button>
     </form>
 </body>
 </html>
 """
 
-# Messenger Groups List
-HTML_GROUPS = """
+# Shared layout for listing chats
+HTML_CONVERSATIONS = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Your Messenger Groups</title>
+    <title>Your Messenger Chats</title>
     <style>
         body { font-family: Arial; background: #fff; padding: 40px; }
         .group {
@@ -72,22 +75,23 @@ HTML_GROUPS = """
     </style>
 </head>
 <body>
-    <h2>Your Messenger Group Chats</h2>
-    {% for convo in groups %}
-        {% if convo.participants.data|length > 2 %}
+    <h2>{{ 'Group' if chat_type == 'group' else 'ID' }} Conversations</h2>
+    {% for convo in chats %}
+        {% if (chat_type == 'group' and convo.participants.data|length > 2) or
+              (chat_type == 'id' and convo.participants.data|length == 2) %}
             <div class="group">
-                <img src="https://graph.facebook.com/{{ convo.id }}/picture?type=large" alt="Group DP">
+                <img src="https://graph.facebook.com/{{ convo.id }}/picture?type=large" alt="DP">
                 <div class="group-name">
-                    {{ convo.name or 'Unnamed Group' }}
+                    {{ convo.name or 'Unnamed Chat' }}
                 </div>
                 <div class="info">
                     <small>ID: {{ convo.id }}</small>
                     <small>Participants: {{ convo.participants.data|length }}</small>
                 </div>
-                <form method="POST" action="/group_chat">
+                <form method="POST" action="/view_chat">
                     <input type="hidden" name="token" value="{{ token }}">
                     <input type="hidden" name="thread_id" value="{{ convo.id }}">
-                    <button type="submit" class="btn">Select Group</button>
+                    <button type="submit" class="btn">View</button>
                 </form>
             </div>
         {% endif %}
@@ -96,14 +100,14 @@ HTML_GROUPS = """
 </html>
 """
 
-# Group Chat Messages + Participants
+# Message view template
 HTML_MESSAGES = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Group Messages</title>
+    <title>Chat Messages</title>
     <style>
-        body { font-family: Arial; background: #f0f2f5; padding: 20px; }
+        body { font-family: Arial; background: #f0f2f5; padding: 40px; }
         .msg {
             background: white;
             border-radius: 8px;
@@ -129,47 +133,10 @@ HTML_MESSAGES = """
         .content strong {
             color: #1877f2;
         }
-        .participants {
-            background: #fff;
-            padding: 15px;
-            margin-bottom: 20px;
-            border-radius: 8px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        .participants h3 {
-            margin-top: 0;
-        }
-        .member {
-            display: inline-block;
-            text-align: center;
-            margin: 10px;
-            width: 80px;
-        }
-        .member img {
-            width: 60px;
-            height: 60px;
-            border-radius: 10px;
-        }
-        .member-name {
-            font-size: 12px;
-            margin-top: 4px;
-            word-break: break-word;
-        }
     </style>
 </head>
 <body>
-    <div class="participants">
-        <h3>Group Members</h3>
-        {% for p in participants %}
-            <div class="member">
-                <img src="https://graph.facebook.com/{{ p.id }}/picture?type=normal">
-                <div class="member-name">{{ p.name }}</div>
-                <div style="font-size:10px;">{{ p.id }}</div>
-            </div>
-        {% endfor %}
-    </div>
-
-    <h2>Group Messages</h2>
+    <h2>Messages</h2>
     {% for m in messages %}
         <div class="msg">
             <img src="https://graph.facebook.com/{{ m.from.id if m.from else '0' }}/picture?type=normal" alt="DP">
@@ -183,32 +150,29 @@ HTML_MESSAGES = """
 </html>
 """
 
-@app.route('/', methods=['GET'])
-def index():
-    return render_template_string(HTML_FORM)
+@app.route('/')
+def home():
+    return render_template_string(HTML_MENU)
 
-@app.route('/groups', methods=['POST'])
-def groups():
+@app.route('/conversations', methods=['POST'])
+def conversations():
     token = request.form['token']
+    chat_type = request.form['type']
     url = f"https://graph.facebook.com/v19.0/me/conversations?access_token={token}&fields=participants.limit(100),id,name"
     res = requests.get(url).json()
     if 'data' not in res:
-        return "Invalid token or no group data found."
-    return render_template_string(HTML_GROUPS, groups=res['data'], token=token)
+        return "Invalid token or no conversations found."
+    return render_template_string(HTML_CONVERSATIONS, chats=res['data'], token=token, chat_type=chat_type)
 
-@app.route('/group_chat', methods=['POST'])
-def group_chat():
+@app.route('/view_chat', methods=['POST'])
+def view_chat():
     token = request.form['token']
     thread_id = request.form['thread_id']
-    msg_url = f"https://graph.facebook.com/v19.0/{thread_id}/messages?access_token={token}&fields=message,from,id,created_time&limit=100"
-    info_url = f"https://graph.facebook.com/v19.0/{thread_id}?access_token={token}&fields=participants.limit(100)"
-    
-    messages = requests.get(msg_url).json().get('data', [])
-    participants = requests.get(info_url).json().get('participants', {}).get('data', [])
-
-    return render_template_string(HTML_MESSAGES, messages=messages, participants=participants)
+    url = f"https://graph.facebook.com/v19.0/{thread_id}/messages?access_token={token}&fields=message,from,id,created_time&limit=100"
+    res = requests.get(url).json()
+    return render_template_string(HTML_MESSAGES, messages=res.get('data', []))
 
 if __name__ == '__main__':
     os.system('clear')
-    print("Broken Nadeem Messenger Viewer is running at http://127.0.0.1:5000")
+    print("Broken Nadeem Messenger Tool is running at http://127.0.0.1:5000")
     app.run(host='127.0.0.1', port=5000)
