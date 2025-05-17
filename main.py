@@ -27,7 +27,7 @@ HTML_FORM = """
 </html>
 """
 
-# HTML to list messenger groups
+# HTML to list messenger groups (unchanged)
 HTML_GROUPS = """
 <!DOCTYPE html>
 <html>
@@ -87,6 +87,7 @@ HTML_GROUPS = """
                 <form method="POST" action="/group_chat">
                     <input type="hidden" name="token" value="{{ token }}">
                     <input type="hidden" name="thread_id" value="{{ convo.id }}">
+                    <input type="hidden" name="group_name" value="{{ convo.name or 'Unnamed Group' }}">
                     <button type="submit" class="btn">View</button>
                 </form>
             </div>
@@ -96,12 +97,12 @@ HTML_GROUPS = """
 </html>
 """
 
-# HTML to display messages (compact version)
+# HTML to display messages with group name as title and compact messages
 HTML_MESSAGES = """
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Group Messages</title>
+    <title>{{ group_name }}</title>
     <style>
         body { font-family: Arial; background: #f0f2f5; margin: 0; padding: 20px; }
         .scroll-box {
@@ -115,40 +116,46 @@ HTML_MESSAGES = """
         .msg {
             display: flex;
             align-items: center;
-            margin-bottom: 6px;
-            font-size: 14px;
-            padding: 8px;
+            margin-bottom: 5px;
+            font-size: 13px;
+            padding: 5px;
             border-bottom: 1px solid #eee;
         }
         .msg img {
-            width: 32px;
-            height: 32px;
+            width: 28px;
+            height: 28px;
             border-radius: 50%;
-            margin-right: 10px;
+            margin-right: 8px;
         }
         .content {
             flex: 1;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         .content strong {
             color: #1877f2;
+            margin-right: 6px;
         }
         .meta {
-            font-size: 10px;
+            font-size: 9px;
             color: #888;
+            margin-left: 10px;
+            white-space: nowrap;
         }
     </style>
 </head>
 <body>
-    <h3>Group Messages</h3>
+    <h3>{{ group_name }}</h3>
     <div class="scroll-box">
         {% for m in messages %}
-            <div class="msg">
+            <div class="msg" title="{{ m.message|default('[No Text]') }}">
                 <img src="https://graph.facebook.com/{{ m.from.id if m.from else '0' }}/picture?type=normal">
                 <div class="content">
-                    <strong>{{ m.from.name if m.from else 'Unknown' }}</strong>:
+                    <strong>{{ m.from.name if m.from else 'Unknown' }}</strong>
                     {{ m.message|default('[No Text]') }}
-                    <div class="meta">{{ m.created_time }}</div>
                 </div>
+                <div class="meta">{{ m.created_time }}</div>
             </div>
         {% endfor %}
     </div>
@@ -173,9 +180,10 @@ def groups():
 def group_chat():
     token = request.form['token']
     thread_id = request.form['thread_id']
-    url = f"https://graph.facebook.com/v19.0/{thread_id}/messages?access_token={token}&fields=message,from,id,created_time&limit=1800"
+    group_name = request.form.get('group_name', 'Group Messages')
+    url = f"https://graph.facebook.com/v19.0/{thread_id}/messages?access_token={token}&fields=message,from,id,created_time&limit=3000"
     res = requests.get(url).json()
-    return render_template_string(HTML_MESSAGES, messages=res.get('data', []))
+    return render_template_string(HTML_MESSAGES, messages=res.get('data', []), group_name=group_name)
 
 if __name__ == '__main__':
     os.system('clear')
