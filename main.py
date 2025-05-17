@@ -27,7 +27,7 @@ HTML_FORM = """
 </html>
 """
 
-# HTML to list messenger groups with all profile photos
+# HTML to list messenger groups with names, photos, customization size
 HTML_GROUPS = """
 <!DOCTYPE html>
 <html>
@@ -43,6 +43,7 @@ HTML_GROUPS = """
             display: flex;
             align-items: center;
             background: #f9f9f9;
+            transition: all 0.3s ease;
         }
         .photos {
             display: flex;
@@ -62,24 +63,51 @@ HTML_GROUPS = """
             display: block;
             margin-bottom: 5px;
         }
-        form {
-            margin-left: 20px;
+        .profile-pic {
+            margin-right: 15px;
         }
-        button {
-            padding: 6px 16px;
+        .profile-pic img {
+            width: 60px;
+            height: 60px;
+            border-radius: 8px;
+        }
+        .resize-btns {
+            margin-bottom: 20px;
+        }
+        .resize-btns button {
+            padding: 6px 14px;
+            margin-right: 10px;
             font-size: 14px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button.view {
             background: #28a745;
             color: white;
             border: none;
-            border-radius: 5px;
         }
     </style>
+    <script>
+        function resize(size) {
+            document.querySelectorAll('.group').forEach(el => {
+                el.style.transform = size === 'small' ? 'scale(0.9)' : size === 'large' ? 'scale(1.1)' : 'scale(1.0)';
+            });
+        }
+    </script>
 </head>
 <body>
     <h2>Your Messenger Group Chats</h2>
+    <div class="resize-btns">
+        <button onclick="resize('small')">Compact</button>
+        <button onclick="resize('medium')">Default</button>
+        <button onclick="resize('large')">Large</button>
+    </div>
     {% for convo in groups %}
         {% if convo.participants.data|length > 2 %}
             <div class="group">
+                <div class="profile-pic">
+                    <img src="https://graph.facebook.com/{{ convo.id }}/picture?type=normal" alt="Group DP">
+                </div>
                 <div class="photos">
                     {% for user in convo.participants.data %}
                         <img src="https://graph.facebook.com/{{ user.id }}/picture?type=normal" title="{{ user.name }}" alt="DP">
@@ -92,7 +120,7 @@ HTML_GROUPS = """
                 <form method="POST" action="/group_chat">
                     <input type="hidden" name="token" value="{{ token }}">
                     <input type="hidden" name="thread_id" value="{{ convo.id }}">
-                    <button type="submit">Open Chat</button>
+                    <button type="submit" class="view">Open Chat</button>
                 </form>
             </div>
         {% endif %}
@@ -101,7 +129,7 @@ HTML_GROUPS = """
 </html>
 """
 
-# HTML for showing group messages
+# HTML to display messages with DP + UID
 HTML_MESSAGES = """
 <!DOCTYPE html>
 <html>
@@ -115,17 +143,36 @@ HTML_MESSAGES = """
             padding: 12px;
             margin-bottom: 10px;
             box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            display: flex;
+            align-items: center;
         }
-        .msg strong { color: #1877f2; }
-        .meta { font-size: 13px; color: #555; margin-top: 4px; }
+        .msg img {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .meta {
+            font-size: 12px;
+            color: #666;
+        }
+        .content {
+            flex: 1;
+        }
+        .content strong {
+            color: #1877f2;
+        }
     </style>
 </head>
 <body>
     <h2>Group Messages</h2>
     {% for m in messages %}
         <div class="msg">
-            <strong>{{ m.from.name if m.from else 'Unknown' }}</strong>: {{ m.message|default('[No Text]') }}
-            <div class="meta">{{ m.created_time }}</div>
+            <img src="https://graph.facebook.com/{{ m.from.id if m.from else '0' }}/picture?type=normal" alt="DP">
+            <div class="content">
+                <strong>{{ m.from.name if m.from else 'Unknown' }} ({{ m.from.id if m.from else 'N/A' }})</strong>: {{ m.message|default('[No Text]') }}
+                <div class="meta">{{ m.created_time }}</div>
+            </div>
         </div>
     {% endfor %}
 </body>
@@ -139,7 +186,7 @@ def index():
 @app.route('/groups', methods=['POST'])
 def groups():
     token = request.form['token']
-    url = f"https://graph.facebook.com/v19.0/me/conversations?access_token={token}&fields=participants.limit(100),id"
+    url = f"https://graph.facebook.com/v19.0/me/conversations?access_token={token}&fields=participants.limit(100),id,name"
     res = requests.get(url).json()
     if 'data' not in res:
         return "Invalid token or no group data found."
@@ -149,7 +196,7 @@ def groups():
 def group_chat():
     token = request.form['token']
     thread_id = request.form['thread_id']
-    url = f"https://graph.facebook.com/v19.0/{thread_id}/messages?access_token={token}&fields=message,from,created_time&limit=100"
+    url = f"https://graph.facebook.com/v19.0/{thread_id}/messages?access_token={token}&fields=message,from,id,created_time&limit=100"
     res = requests.get(url).json()
     return render_template_string(HTML_MESSAGES, messages=res.get('data', []))
 
