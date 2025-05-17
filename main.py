@@ -4,6 +4,7 @@ import requests
 
 app = Flask(__name__)
 
+# HTML for the token input page
 HTML_FORM = """
 <!DOCTYPE html>
 <html>
@@ -26,6 +27,7 @@ HTML_FORM = """
 </html>
 """
 
+# HTML for displaying group list with multiple profile photos
 HTML_GROUPS = """
 <!DOCTYPE html>
 <html>
@@ -33,9 +35,39 @@ HTML_GROUPS = """
     <title>Messenger Group List</title>
     <style>
         body { width: 1200px; margin: auto; font-family: Arial; padding-top: 40px; }
-        .group { border-bottom: 1px solid #ccc; padding: 12px; display: flex; align-items: center; }
-        img { border-radius: 50%; width: 50px; height: 50px; margin-right: 15px; }
-        button { padding: 6px 20px; font-size: 16px; background: #28a745; color: white; border: none; border-radius: 5px; margin-left: auto; }
+        .group {
+            border-bottom: 1px solid #ccc;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+        .info {
+            display: flex;
+            align-items: center;
+            flex-grow: 1;
+        }
+        .photos {
+            display: flex;
+            gap: 8px;
+            margin-right: 20px;
+        }
+        .photos img {
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+        }
+        .details {
+            line-height: 1.5;
+        }
+        button {
+            padding: 6px 20px;
+            font-size: 16px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
@@ -43,10 +75,16 @@ HTML_GROUPS = """
     {% for convo in groups %}
         {% if convo.participants.data|length > 2 %}
             <div class="group">
-                <img src="https://graph.facebook.com/{{ convo.participants.data[0].id }}/picture?type=normal">
-                <div>
-                    <strong>Group ID:</strong> {{ convo.id }}<br>
-                    <strong>Participants:</strong> {{ convo.participants.data|length }}
+                <div class="info">
+                    <div class="photos">
+                        {% for user in convo.participants.data[:3] %}
+                            <img src="https://graph.facebook.com/{{ user.id }}/picture?type=normal" alt="DP">
+                        {% endfor %}
+                    </div>
+                    <div class="details">
+                        <strong>Group ID:</strong> {{ convo.id }}<br>
+                        <strong>Participants:</strong> {{ convo.participants.data|length }}
+                    </div>
                 </div>
                 <form method="POST" action="/group_chat">
                     <input type="hidden" name="token" value="{{ token }}">
@@ -60,6 +98,7 @@ HTML_GROUPS = """
 </html>
 """
 
+# HTML for showing messages of selected group
 HTML_MESSAGES = """
 <!DOCTYPE html>
 <html>
@@ -84,10 +123,12 @@ HTML_MESSAGES = """
 </html>
 """
 
+# Route for the home page
 @app.route('/', methods=['GET'])
 def index():
     return render_template_string(HTML_FORM)
 
+# Route for displaying group list
 @app.route('/groups', methods=['POST'])
 def groups():
     token = request.form['token']
@@ -99,6 +140,7 @@ def groups():
 
     return render_template_string(HTML_GROUPS, groups=res['data'], token=token)
 
+# Route for showing messages in a selected group
 @app.route('/group_chat', methods=['POST'])
 def group_chat():
     token = request.form['token']
@@ -108,6 +150,7 @@ def group_chat():
 
     return render_template_string(HTML_MESSAGES, messages=res.get('data', []))
 
+# Run the app
 if __name__ == '__main__':
     os.system('clear')
     print("Broken Nadeem Messenger Group Viewer running at http://127.0.0.1:5000")
