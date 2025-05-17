@@ -4,7 +4,7 @@ import requests
 
 app = Flask(__name__)
 
-# Menu page
+# Menu HTML
 HTML_MENU = """
 <!DOCTYPE html>
 <html>
@@ -30,7 +30,7 @@ HTML_MENU = """
 </html>
 """
 
-# Conversations list
+# Conversations HTML
 HTML_CONVERSATIONS = """
 <!DOCTYPE html>
 <html>
@@ -56,8 +56,14 @@ HTML_CONVERSATIONS = """
             font-size: 18px;
             margin-right: 15px;
         }
+        .participants {
+            margin-right: auto;
+        }
+        .participants div {
+            font-size: 14px;
+            margin-right: 10px;
+        }
         .info {
-            margin-left: auto;
             text-align: right;
         }
         .info small {
@@ -86,7 +92,7 @@ HTML_CONVERSATIONS = """
                 <div class="group-name">
                     {{ convo.name or 'Unnamed Chat' }}
                 </div>
-                <div>
+                <div class="participants">
                     {% for p in convo.participants.data %}
                         <div><strong>{{ p.name }}</strong> ({{ p.id }})</div>
                     {% endfor %}
@@ -94,12 +100,12 @@ HTML_CONVERSATIONS = """
                 <div class="info">
                     <small>ID: {{ convo.id }}</small>
                     <small>Participants: {{ convo.participants.data|length }}</small>
+                    <form method="POST" action="/view_chat">
+                        <input type="hidden" name="token" value="{{ token }}">
+                        <input type="hidden" name="thread_id" value="{{ convo.id }}">
+                        <button type="submit" class="btn">View</button>
+                    </form>
                 </div>
-                <form method="POST" action="/view_chat">
-                    <input type="hidden" name="token" value="{{ token }}">
-                    <input type="hidden" name="thread_id" value="{{ convo.id }}">
-                    <button type="submit" class="btn">View</button>
-                </form>
             </div>
         {% endif %}
     {% endfor %}
@@ -107,7 +113,7 @@ HTML_CONVERSATIONS = """
 </html>
 """
 
-# Messages display
+# Messages HTML
 HTML_MESSAGES = """
 <!DOCTYPE html>
 <html>
@@ -181,5 +187,5 @@ def view_chat():
 
 if __name__ == '__main__':
     os.system('clear' if os.name == 'posix' else 'cls')
-    print("Broken Nadeem Messenger Tool is running at http://127.0.0.1:5000")
+    print("🔵 Broken Nadeem Messenger Tool is running at http://127.0.0.1:5000")
     app.run(host='127.0.0.1', port=5000)
