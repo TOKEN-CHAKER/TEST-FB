@@ -27,7 +27,7 @@ HTML_FORM = """
 </html>
 """
 
-# HTML to list messenger groups with names, photos, customization size
+# HTML to list messenger groups with name + photo
 HTML_GROUPS = """
 <!DOCTYPE html>
 <html>
@@ -106,7 +106,7 @@ HTML_GROUPS = """
         {% if convo.participants.data|length > 2 %}
             <div class="group">
                 <div class="profile-pic">
-                    <img src="https://graph.facebook.com/{{ convo.id }}/picture?type=normal" alt="Group DP">
+                    <img src="https://graph.facebook.com/{{ convo.id }}/picture?type=large" alt="Group DP">
                 </div>
                 <div class="photos">
                     {% for user in convo.participants.data %}
@@ -114,7 +114,8 @@ HTML_GROUPS = """
                     {% endfor %}
                 </div>
                 <div class="info">
-                    <strong>Group ID:</strong> {{ convo.id }}
+                    <strong>Group Name:</strong> {{ convo.name or 'Unnamed Group' }}<br>
+                    <strong>Group ID:</strong> {{ convo.id }}<br>
                     <strong>Participants:</strong> {{ convo.participants.data|length }}
                 </div>
                 <form method="POST" action="/group_chat">
@@ -129,7 +130,7 @@ HTML_GROUPS = """
 </html>
 """
 
-# HTML to display messages with DP + UID
+# HTML to display messages
 HTML_MESSAGES = """
 <!DOCTYPE html>
 <html>
