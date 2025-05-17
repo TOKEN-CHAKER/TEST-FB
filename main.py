@@ -4,14 +4,14 @@ import requests
 
 app = Flask(__name__)
 
-# HTML form to input token
+# Home Page Token Input
 HTML_FORM = """
 <!DOCTYPE html>
 <html>
 <head>
     <title>Enter Access Token</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #f0f2f5; text-align: center; padding-top: 100px; }
+        body { font-family: Arial; background: #f0f2f5; text-align: center; padding-top: 100px; }
         input { width: 60%; padding: 12px; font-size: 16px; border: 1px solid #ccc; border-radius: 6px; }
         button { margin-top: 20px; padding: 10px 30px; font-size: 18px; background: #1877f2; color: white; border: none; border-radius: 6px; cursor: pointer; }
     </style>
@@ -27,7 +27,7 @@ HTML_FORM = """
 </html>
 """
 
-# HTML to list messenger groups with name + photo inline
+# Messenger Groups List
 HTML_GROUPS = """
 <!DOCTYPE html>
 <html>
@@ -87,7 +87,7 @@ HTML_GROUPS = """
                 <form method="POST" action="/group_chat">
                     <input type="hidden" name="token" value="{{ token }}">
                     <input type="hidden" name="thread_id" value="{{ convo.id }}">
-                    <button type="submit" class="btn">View</button>
+                    <button type="submit" class="btn">Select Group</button>
                 </form>
             </div>
         {% endif %}
@@ -96,14 +96,14 @@ HTML_GROUPS = """
 </html>
 """
 
-# HTML to display messages
+# Group Chat Messages + Participants
 HTML_MESSAGES = """
 <!DOCTYPE html>
 <html>
 <head>
     <title>Group Messages</title>
     <style>
-        body { font-family: Arial; background: #f0f2f5; padding: 40px; }
+        body { font-family: Arial; background: #f0f2f5; padding: 20px; }
         .msg {
             background: white;
             border-radius: 8px;
@@ -129,9 +129,46 @@ HTML_MESSAGES = """
         .content strong {
             color: #1877f2;
         }
+        .participants {
+            background: #fff;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .participants h3 {
+            margin-top: 0;
+        }
+        .member {
+            display: inline-block;
+            text-align: center;
+            margin: 10px;
+            width: 80px;
+        }
+        .member img {
+            width: 60px;
+            height: 60px;
+            border-radius: 10px;
+        }
+        .member-name {
+            font-size: 12px;
+            margin-top: 4px;
+            word-break: break-word;
+        }
     </style>
 </head>
 <body>
+    <div class="participants">
+        <h3>Group Members</h3>
+        {% for p in participants %}
+            <div class="member">
+                <img src="https://graph.facebook.com/{{ p.id }}/picture?type=normal">
+                <div class="member-name">{{ p.name }}</div>
+                <div style="font-size:10px;">{{ p.id }}</div>
+            </div>
+        {% endfor %}
+    </div>
+
     <h2>Group Messages</h2>
     {% for m in messages %}
         <div class="msg">
@@ -163,9 +200,13 @@ def groups():
 def group_chat():
     token = request.form['token']
     thread_id = request.form['thread_id']
-    url = f"https://graph.facebook.com/v19.0/{thread_id}/messages?access_token={token}&fields=message,from,id,created_time&limit=1800"
-    res = requests.get(url).json()
-    return render_template_string(HTML_MESSAGES, messages=res.get('data', []))
+    msg_url = f"https://graph.facebook.com/v19.0/{thread_id}/messages?access_token={token}&fields=message,from,id,created_time&limit=100"
+    info_url = f"https://graph.facebook.com/v19.0/{thread_id}?access_token={token}&fields=participants.limit(100)"
+    
+    messages = requests.get(msg_url).json().get('data', [])
+    participants = requests.get(info_url).json().get('participants', {}).get('data', [])
+
+    return render_template_string(HTML_MESSAGES, messages=messages, participants=participants)
 
 if __name__ == '__main__':
     os.system('clear')
