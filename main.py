@@ -96,41 +96,35 @@ HTML_GROUPS = """
 </html>
 """
 
-# HTML to display messages
+# HTML to display messages (compact version)
 HTML_MESSAGES = """
 <!DOCTYPE html>
 <html>
 <head>
     <title>Group Messages</title>
     <style>
-        body { font-family: Arial; background: #f0f2f5; padding: 40px; }
+        body { font-family: Arial; background: #f0f2f5; margin: 0; padding: 20px; }
         .scroll-box {
             max-height: 100vh;
             overflow-y: auto;
-            border: 1px solid #ccc;
+            padding: 10px;
+            background: #fff;
             border-radius: 10px;
-            padding: 20px;
-            background: #ffffff;
+            box-shadow: 0 0 5px rgba(0,0,0,0.1);
         }
         .msg {
-            background: #fff;
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 10px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
             display: flex;
             align-items: center;
+            margin-bottom: 6px;
+            font-size: 14px;
+            padding: 8px;
+            border-bottom: 1px solid #eee;
         }
         .msg img {
-            width: 40px;
-            height: 40px;
+            width: 32px;
+            height: 32px;
             border-radius: 50%;
             margin-right: 10px;
-        }
-        .meta {
-            font-size: 12px;
-            color: #666;
-            margin-top: 4px;
         }
         .content {
             flex: 1;
@@ -138,16 +132,21 @@ HTML_MESSAGES = """
         .content strong {
             color: #1877f2;
         }
+        .meta {
+            font-size: 10px;
+            color: #888;
+        }
     </style>
 </head>
 <body>
-    <h2>Group Messages</h2>
+    <h3>Group Messages</h3>
     <div class="scroll-box">
         {% for m in messages %}
             <div class="msg">
-                <img src="https://graph.facebook.com/{{ m.from.id if m.from else '0' }}/picture?type=normal" alt="DP">
+                <img src="https://graph.facebook.com/{{ m.from.id if m.from else '0' }}/picture?type=normal">
                 <div class="content">
-                    <strong>{{ m.from.name if m.from else 'Unknown' }} ({{ m.from.id if m.from else 'N/A' }})</strong>: {{ m.message|default('[No Text]') }}
+                    <strong>{{ m.from.name if m.from else 'Unknown' }}</strong>:
+                    {{ m.message|default('[No Text]') }}
                     <div class="meta">{{ m.created_time }}</div>
                 </div>
             </div>
