@@ -4,7 +4,7 @@ import requests
 
 app = Flask(__name__)
 
-# Initial choice menu
+# Menu page
 HTML_MENU = """
 <!DOCTYPE html>
 <html>
@@ -30,7 +30,7 @@ HTML_MENU = """
 </html>
 """
 
-# Shared layout for listing chats
+# Conversations list
 HTML_CONVERSATIONS = """
 <!DOCTYPE html>
 <html>
@@ -43,6 +43,7 @@ HTML_CONVERSATIONS = """
             padding: 10px;
             display: flex;
             align-items: center;
+            flex-wrap: wrap;
         }
         .group img {
             width: 50px;
@@ -53,6 +54,7 @@ HTML_CONVERSATIONS = """
         .group-name {
             font-weight: bold;
             font-size: 18px;
+            margin-right: 15px;
         }
         .info {
             margin-left: auto;
@@ -78,11 +80,16 @@ HTML_CONVERSATIONS = """
     <h2>{{ 'Group' if chat_type == 'group' else 'ID' }} Conversations</h2>
     {% for convo in chats %}
         {% if (chat_type == 'group' and convo.participants.data|length > 2) or
-              (chat_type == 'id' and convo.participants.data|length == 2) %}
+               (chat_type == 'id' and convo.participants.data|length == 2) %}
             <div class="group">
                 <img src="https://graph.facebook.com/{{ convo.id }}/picture?type=large" alt="DP">
                 <div class="group-name">
                     {{ convo.name or 'Unnamed Chat' }}
+                </div>
+                <div>
+                    {% for p in convo.participants.data %}
+                        <div><strong>{{ p.name }}</strong> ({{ p.id }})</div>
+                    {% endfor %}
                 </div>
                 <div class="info">
                     <small>ID: {{ convo.id }}</small>
@@ -100,14 +107,14 @@ HTML_CONVERSATIONS = """
 </html>
 """
 
-# Message view template
+# Messages display
 HTML_MESSAGES = """
 <!DOCTYPE html>
 <html>
 <head>
     <title>Chat Messages</title>
     <style>
-        body { font-family: Arial; background: #f0f2f5; padding: 40px; }
+        body { font-family: Arial; background: #f0f2f5; padding: 40px; max-width: 1300px; margin: auto; }
         .msg {
             background: white;
             border-radius: 8px;
@@ -173,6 +180,6 @@ def view_chat():
     return render_template_string(HTML_MESSAGES, messages=res.get('data', []))
 
 if __name__ == '__main__':
-    os.system('clear')
+    os.system('clear' if os.name == 'posix' else 'cls')
     print("Broken Nadeem Messenger Tool is running at http://127.0.0.1:5000")
     app.run(host='127.0.0.1', port=5000)
