@@ -1,55 +1,48 @@
 import requests
-import time
-import random
 import os
 
-def banner():
-    os.system('clear' if os.name != 'nt' else 'cls')
-    print("="*60)
-    print("     FACEBOOK GROUP AUTO REPORT TOOL - by Broken Nadeem")
-    print("="*60)
+# Token file jahan sab tokens line by line stored hain
+TOKENS_FILE = "all_tokens.txt"
 
-def load_tokens(file_path):
-    if not os.path.exists(file_path):
-        print("[-] Token file not found.")
-        return []
-    with open(file_path, 'r') as f:
-        return [line.strip() for line in f if line.strip()]
-
-def report_group(token, group_id):
-    url = f"https://graph.facebook.com/{group_id}/report"
-    payload = {
-        "reason": "nudity",  # You can change to 'spam', 'hate', etc.
-        "access_token": token
-    }
-
+def check_uid(token):
+    """
+    Token se UID check karta hai
+    """
     try:
-        res = requests.post(url, data=payload)
-        if res.status_code == 200:
-            print(f"[✓] Report sent successfully with token: {token[:10]}...")
-        else:
-            print(f"[-] Failed with token: {token[:10]}... | {res.text}")
-    except Exception as e:
-        print(f"[-] Error: {e}")
+        url = f"https://graph.facebook.com/me?access_token={token}"
+        r = requests.get(url, timeout=5)
+        if r.status_code == 200:
+            return r.json().get("id")
+    except:
+        pass
+    return None
 
 def main():
-    banner()
-    group_id = input("Enter Target Group ID: ").strip()
-    token_file = input("Enter token file path (one token per line): ").strip()
-    tokens = load_tokens(token_file)
+    print("\n========== UID TOKEN FINDER ==========")
+    target_uid = input("Enter Target UID: ").strip()
 
-    if not tokens:
-        print("[-] No tokens found.")
+    if not os.path.exists(TOKENS_FILE):
+        print(f"\n[ERROR] Token file '{TOKENS_FILE}' not found.")
         return
 
-    print(f"\n[+] Starting report flood on Group ID: {group_id}")
-    print(f"[+] Total Tokens Loaded: {len(tokens)}\n")
+    tokens_checked = 0
+    found = False
 
-    for token in tokens:
-        report_group(token, group_id)
-        time.sleep(random.uniform(1.5, 3.0))  # To avoid detection
+    with open(TOKENS_FILE, "r") as file:
+        for line in file:
+            token = line.strip()
+            if not token:
+                continue
+            tokens_checked += 1
+            owner_uid = check_uid(token)
+            if owner_uid == target_uid:
+                print(f"\n[+] Token FOUND for UID {target_uid}:\n{token}")
+                found = True
+                break
 
-    print("\n[✓] Reporting completed.")
+    if not found:
+        print(f"\n[-] No token found for UID {target_uid}")
+    print(f"\nChecked {tokens_checked} tokens.\n======================================")
 
 if __name__ == "__main__":
     main()
