@@ -4,7 +4,7 @@ import requests
 
 app = Flask(__name__)
 
-# Facebook-style Token Input Page
+# Token Input Page
 HTML_FORM = """
 <!DOCTYPE html>
 <html>
@@ -61,7 +61,7 @@ HTML_FORM = """
 </html>
 """
 
-# Facebook-style Messenger Group List Page
+# Group List Page
 HTML_GROUPS = """
 <!DOCTYPE html>
 <html>
@@ -138,7 +138,7 @@ HTML_GROUPS = """
 </html>
 """
 
-# Facebook-style Message Viewer
+# Chat Viewer with profile pic next to name
 HTML_MESSAGES = """
 <!DOCTYPE html>
 <html>
@@ -179,7 +179,14 @@ HTML_MESSAGES = """
             flex-direction: column;
         }
         .name-id .name {
-            line-height: 1;
+            display: flex;
+            align-items: center;
+        }
+        .name-id .name img {
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            margin-right: 6px;
         }
         .name-id .userid {
             font-size: 11px;
@@ -208,7 +215,10 @@ HTML_MESSAGES = """
                 <div class="header">
                     <img src="https://graph.facebook.com/{{ m.from.id if m.from else '0' }}/picture?type=normal" alt="profile-pic">
                     <div class="name-id">
-                        <div class="name">{{ m.from.name if m.from else 'Unknown' }}</div>
+                        <div class="name">
+                            <img src="https://graph.facebook.com/{{ m.from.id if m.from else '0' }}/picture?type=normal">
+                            {{ m.from.name if m.from else 'Unknown' }}
+                        </div>
                         <div class="userid">ID: {{ m.from.id if m.from else 'Unknown' }}</div>
                     </div>
                 </div>
