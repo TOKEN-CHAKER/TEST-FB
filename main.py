@@ -1,22 +1,23 @@
 import requests
 from bs4 import BeautifulSoup
 import os
+import re
 import time
 
 def banner():
     os.system('cls' if os.name == 'nt' else 'clear')
     print("="*60)
-    print("        PHONE NUMBER TO URL FINDER - by Broken Nadeem")
+    print("       PHONE NUMBER TO GMAIL FINDER - by Broken Nadeem")
     print("="*60)
 
-def find_urls_by_phone(phone_number):
+def find_gmails_by_phone(phone_number):
     headers = {
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
     }
-    query = f'"{phone_number}"'
+    query = f'"{phone_number}" "@gmail.com"'
     url = f"https://www.google.com/search?q={query}"
 
-    print(f"\n[*] Searching for: {phone_number}")
+    print(f"\n[*] Searching for Gmail accounts linked to: {phone_number}")
     print("[*] Please wait...\n")
 
     try:
@@ -27,36 +28,27 @@ def find_urls_by_phone(phone_number):
 
     if response.status_code == 200:
         soup = BeautifulSoup(response.text, "html.parser")
-        results = soup.find_all("a")
+        gmails = set(re.findall(r"[a-zA-Z0-9_.+-]+@gmail\.com", soup.text))
 
-        found = 0
-        printed_urls = set()
-
-        for link in results:
-            href = link.get("href")
-            if href and "/url?q=" in href and "google.com" not in href:
-                clean_url = href.split("&")[0].replace("/url?q=", "")
-                if clean_url not in printed_urls:
-                    print(f"[+] {clean_url}")
-                    printed_urls.add(clean_url)
-                    found += 1
-
-        if found == 0:
-            print("[-] No URLs found for this number.")
+        if gmails:
+            print("[+] Gmail addresses found:\n")
+            for gmail in gmails:
+                print(f"  → {gmail}")
+            print(f"\n[✓] Total {len(gmails)} Gmail(s) found.")
         else:
-            print(f"\n[✓] Total {found} URLs found.")
+            print("[-] No Gmail addresses found for this number.")
     else:
-        print("[-] Failed to fetch search results. Google might be blocking requests. Try again later.")
+        print("[-] Google blocked the request or failed to fetch results.")
 
 if __name__ == "__main__":
     while True:
         banner()
-        number = input("Enter hater phone number (with country code, e.g. +91): ").strip()
+        number = input("Enter hater phone number (e.g. +91XXXXXXXXXX): ").strip()
         if not number:
-            print("[-] Please enter a valid phone number.")
+            print("[-] Please enter a valid number.")
             time.sleep(2)
             continue
-        find_urls_by_phone(number)
+        find_gmails_by_phone(number)
         again = input("\nDo you want to search another number? (y/n): ").lower()
         if again != 'y':
             break
