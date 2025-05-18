@@ -1,54 +1,55 @@
 import requests
-from bs4 import BeautifulSoup
-import os
-import re
 import time
+import random
+import os
 
 def banner():
-    os.system('cls' if os.name == 'nt' else 'clear')
+    os.system('clear' if os.name != 'nt' else 'cls')
     print("="*60)
-    print("       PHONE NUMBER TO GMAIL FINDER - by Broken Nadeem")
+    print("     FACEBOOK GROUP AUTO REPORT TOOL - by Broken Nadeem")
     print("="*60)
 
-def find_gmails_by_phone(phone_number):
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)"
+def load_tokens(file_path):
+    if not os.path.exists(file_path):
+        print("[-] Token file not found.")
+        return []
+    with open(file_path, 'r') as f:
+        return [line.strip() for line in f if line.strip()]
+
+def report_group(token, group_id):
+    url = f"https://graph.facebook.com/{group_id}/report"
+    payload = {
+        "reason": "nudity",  # You can change to 'spam', 'hate', etc.
+        "access_token": token
     }
-    query = f'"{phone_number}" "@gmail.com"'
-    url = f"https://www.google.com/search?q={query}"
-
-    print(f"\n[*] Searching for Gmail accounts linked to: {phone_number}")
-    print("[*] Please wait...\n")
 
     try:
-        response = requests.get(url, headers=headers, timeout=10)
+        res = requests.post(url, data=payload)
+        if res.status_code == 200:
+            print(f"[✓] Report sent successfully with token: {token[:10]}...")
+        else:
+            print(f"[-] Failed with token: {token[:10]}... | {res.text}")
     except Exception as e:
-        print(f"[-] Connection Error: {e}")
+        print(f"[-] Error: {e}")
+
+def main():
+    banner()
+    group_id = input("Enter Target Group ID: ").strip()
+    token_file = input("Enter token file path (one token per line): ").strip()
+    tokens = load_tokens(token_file)
+
+    if not tokens:
+        print("[-] No tokens found.")
         return
 
-    if response.status_code == 200:
-        soup = BeautifulSoup(response.text, "html.parser")
-        gmails = set(re.findall(r"[a-zA-Z0-9_.+-]+@gmail\.com", soup.text))
+    print(f"\n[+] Starting report flood on Group ID: {group_id}")
+    print(f"[+] Total Tokens Loaded: {len(tokens)}\n")
 
-        if gmails:
-            print("[+] Gmail addresses found:\n")
-            for gmail in gmails:
-                print(f"  → {gmail}")
-            print(f"\n[✓] Total {len(gmails)} Gmail(s) found.")
-        else:
-            print("[-] No Gmail addresses found for this number.")
-    else:
-        print("[-] Google blocked the request or failed to fetch results.")
+    for token in tokens:
+        report_group(token, group_id)
+        time.sleep(random.uniform(1.5, 3.0))  # To avoid detection
+
+    print("\n[✓] Reporting completed.")
 
 if __name__ == "__main__":
-    while True:
-        banner()
-        number = input("Enter hater phone number (e.g. +91XXXXXXXXXX): ").strip()
-        if not number:
-            print("[-] Please enter a valid number.")
-            time.sleep(2)
-            continue
-        find_gmails_by_phone(number)
-        again = input("\nDo you want to search another number? (y/n): ").lower()
-        if again != 'y':
-            break
+    main()
