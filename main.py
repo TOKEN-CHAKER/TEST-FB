@@ -1,48 +1,52 @@
-import requests
 import os
 
-# Token file jahan sab tokens line by line stored hain
-TOKENS_FILE = "all_tokens.txt"
+def load_file(phone_number):
+    filename = f"{phone_number}.txt"
+    if os.path.isfile(filename):
+        with open(filename, 'r') as f:
+            content = f.read()
+        print(f"\n=== Content of {filename} ===\n{content}\n=============================")
+        return True
+    else:
+        print(f"\n[!] File '{filename}' not found.")
+        return False
 
-def check_uid(token):
-    """
-    Token se UID check karta hai
-    """
-    try:
-        url = f"https://graph.facebook.com/me?access_token={token}"
-        r = requests.get(url, timeout=5)
-        if r.status_code == 200:
-            return r.json().get("id")
-    except:
-        pass
-    return None
+def edit_file(phone_number):
+    filename = f"{phone_number}.txt"
+    print("\n[+] Enter new content for the file (type 'END' on a new line to finish):")
+    lines = []
+    while True:
+        line = input()
+        if line.strip().upper() == 'END':
+            break
+        lines.append(line)
+
+    with open(filename, 'w') as f:
+        f.write("\n".join(lines))
+    print(f"\n[+] File '{filename}' updated successfully.")
 
 def main():
-    print("\n========== UID TOKEN FINDER ==========")
-    target_uid = input("Enter Target UID: ").strip()
-
-    if not os.path.exists(TOKENS_FILE):
-        print(f"\n[ERROR] Token file '{TOKENS_FILE}' not found.")
-        return
-
-    tokens_checked = 0
-    found = False
-
-    with open(TOKENS_FILE, "r") as file:
-        for line in file:
-            token = line.strip()
-            if not token:
-                continue
-            tokens_checked += 1
-            owner_uid = check_uid(token)
-            if owner_uid == target_uid:
-                print(f"\n[+] Token FOUND for UID {target_uid}:\n{token}")
-                found = True
-                break
-
-    if not found:
-        print(f"\n[-] No token found for UID {target_uid}")
-    print(f"\nChecked {tokens_checked} tokens.\n======================================")
+    print("=== Phone Number File Loader ===")
+    phone_number = input("Enter phone number: ").strip()
+    
+    found = load_file(phone_number)
+    
+    if found:
+        print("\nOptions:")
+        print("1. Edit this file")
+        print("2. Exit")
+        choice = input("Select an option (1 or 2): ").strip()
+        if choice == '1':
+            edit_file(phone_number)
+        else:
+            print("Exiting...")
+    else:
+        print("\nDo you want to create this file?")
+        choice = input("Type 'yes' to create, anything else to exit: ").strip().lower()
+        if choice == 'yes':
+            edit_file(phone_number)
+        else:
+            print("Exiting...")
 
 if __name__ == "__main__":
     main()
