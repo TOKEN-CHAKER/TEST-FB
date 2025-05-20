@@ -1,259 +1,93 @@
+from flask import Flask, request, send_file, render_template_string
+import yt_dlp
 import os
-from flask import Flask, request, render_template_string
-import requests
 
 app = Flask(__name__)
 
-# Token Input Page
-HTML_FORM = """
+HTML = '''
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Facebook Token Login</title>
+    <title>Broken Nadeem 4K Video Tool</title>
     <style>
-        body { font-family: Helvetica, Arial, sans-serif; background: #e9ebee; display: flex; justify-content: center; align-items: center; height: 100vh; }
-        .card {
-            background: #fff;
-            padding: 40px;
-            border-radius: 10px;
-            box-shadow: 0 2px 12px rgba(0,0,0,0.1);
-            width: 400px;
+        body {
+            background-color: #000;
+            color: #0f0;
+            font-family: monospace;
             text-align: center;
+            padding: 40px;
         }
-        .card h2 {
-            color: #1877f2;
-            margin-bottom: 20px;
-        }
-        input[type="text"] {
-            width: 100%;
-            padding: 14px;
-            font-size: 16px;
-            border: 1px solid #ddd;
-            border-radius: 6px;
-            margin-top: 10px;
-        }
-        button {
-            width: 100%;
-            margin-top: 20px;
+        input, button {
             padding: 12px;
-            font-size: 16px;
-            background-color: #1877f2;
-            border: none;
-            border-radius: 6px;
-            color: white;
-            font-weight: bold;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #165ecb;
-        }
-    </style>
-</head>
-<body>
-    <div class="card">
-        <h2>Facebook Messenger Viewer</h2>
-        <form action="/groups" method="POST">
-            <input type="text" name="token" placeholder="Enter your access token" required>
-            <button type="submit">View Conversations</button>
-        </form>
-    </div>
-</body>
-</html>
-"""
-
-# Group List Page
-HTML_GROUPS = """
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Your Messenger Groups</title>
-    <style>
-        body { font-family: Helvetica, Arial, sans-serif; background: #f5f6f7; padding: 40px; }
-        h2 { color: #1877f2; }
-        .group {
-            background: #fff;
-            border-radius: 8px;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.1);
-            padding: 15px;
-            display: flex;
-            align-items: center;
-            margin-bottom: 15px;
-        }
-        .group img {
-            width: 50px;
-            height: 50px;
-            border-radius: 10px;
-            margin-right: 15px;
-        }
-        .group-name {
-            font-weight: bold;
             font-size: 18px;
-        }
-        .info {
-            margin-left: auto;
-            text-align: right;
-        }
-        .info small {
-            display: block;
-            color: #555;
-        }
-        .btn {
-            padding: 5px 15px;
-            font-size: 14px;
-            border: none;
-            background: #1877f2;
-            color: white;
-            border-radius: 5px;
-            cursor: pointer;
-            margin-left: 10px;
-        }
-        .btn:hover {
-            background-color: #165ecb;
-        }
-    </style>
-</head>
-<body>
-    <h2>Your Messenger Group Chats</h2>
-    {% for convo in groups %}
-        {% if convo.participants.data|length > 2 %}
-            <div class="group">
-                <img src="https://graph.facebook.com/{{ convo.id }}/picture?type=large" alt="Group DP">
-                <div class="group-name">
-                    {{ convo.name or 'Unnamed Group' }}
-                </div>
-                <div class="info">
-                    <small>ID: {{ convo.id }}</small>
-                    <small>Participants: {{ convo.participants.data|length }}</small>
-                </div>
-                <form method="POST" action="/group_chat">
-                    <input type="hidden" name="token" value="{{ token }}">
-                    <input type="hidden" name="thread_id" value="{{ convo.id }}">
-                    <input type="hidden" name="group_name" value="{{ convo.name or 'Unnamed Group' }}">
-                    <button type="submit" class="btn">View</button>
-                </form>
-            </div>
-        {% endif %}
-    {% endfor %}
-</body>
-</html>
-"""
-
-# Chat Viewer with profile pic next to name
-HTML_MESSAGES = """
-<!DOCTYPE html>
-<html>
-<head>
-    <title>{{ group_name }}</title>
-    <style>
-        body { font-family: Helvetica, Arial, sans-serif; background: #f0f2f5; margin: 0; padding: 20px; }
-        h3 { color: #1877f2; }
-        .scroll-box {
-            max-height: 100vh;
-            overflow-y: auto;
-            padding: 10px;
-            background: #fff;
+            width: 70%;
             border-radius: 10px;
-            box-shadow: 0 0 5px rgba(0,0,0,0.1);
+            border: none;
+            margin: 10px;
         }
-        .msg {
-            border-bottom: 1px solid #eee;
-            padding: 8px 5px;
-            margin-bottom: 6px;
-        }
-        .header {
-            display: flex;
-            align-items: center;
-            font-size: 14px;
-            font-weight: bold;
-            color: #1877f2;
-            margin-bottom: 3px;
-        }
-        .header img {
-            width: 28px;
-            height: 28px;
-            border-radius: 50%;
-            margin-right: 10px;
-        }
-        .header .name-id {
-            display: flex;
-            flex-direction: column;
-        }
-        .name-id .name {
-            display: flex;
-            align-items: center;
-        }
-        .name-id .name img {
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            margin-right: 6px;
-        }
-        .name-id .userid {
-            font-size: 11px;
-            color: #555;
-        }
-        .message-text {
-            font-size: 14px;
-            margin-left: 38px;
-            white-space: pre-wrap;
-            word-wrap: break-word;
-            color: #222;
-        }
-        .timestamp {
-            font-size: 11px;
-            color: #888;
-            margin-left: 38px;
-            margin-top: 3px;
+        video {
+            width: 90%;
+            margin-top: 20px;
+            border: 4px solid #0f0;
+            border-radius: 10px;
         }
     </style>
 </head>
 <body>
-    <h3>{{ group_name }}</h3>
-    <div class="scroll-box">
-        {% for m in messages %}
-            <div class="msg">
-                <div class="header">
-                    <img src="https://graph.facebook.com/{{ m.from.id if m.from else '0' }}/picture?type=normal" alt="profile-pic">
-                    <div class="name-id">
-                        <div class="name">
-                            <img src="https://graph.facebook.com/{{ m.from.id if m.from else '0' }}/picture?type=normal">
-                            {{ m.from.name if m.from else 'Unknown' }}
-                        </div>
-                        <div class="userid">ID: {{ m.from.id if m.from else 'Unknown' }}</div>
-                    </div>
-                </div>
-                <div class="message-text">{{ m.message|default('[No Text]') }}</div>
-                <div class="timestamp">{{ m.created_time }}</div>
-            </div>
-        {% endfor %}
-    </div>
+    <h1>Broken Nadeem Full HD 4K Video Tool</h1>
+    <form method="POST">
+        <input type="text" name="video_url" placeholder="Paste video URL here..." required>
+        <br>
+        <button type="submit">Play Full HD Video</button>
+    </form>
+
+    {% if stream_url %}
+        <h2>{{ video_info.title }}</h2>
+        <video controls autoplay>
+            <source src="{{ stream_url }}" type="video/mp4">
+            Your browser does not support the video tag.
+        </video>
+        <form method="POST" action="/download">
+            <input type="hidden" name="url" value="{{ video_url }}">
+            <button type="submit">Download 4K Video</button>
+        </form>
+    {% endif %}
 </body>
 </html>
-"""
+'''
 
-@app.route('/', methods=['GET'])
+@app.route('/', methods=['GET', 'POST'])
 def index():
-    return render_template_string(HTML_FORM)
+    video_url = None
+    video_info = None
+    stream_url = None
+    if request.method == 'POST':
+        video_url = request.form['video_url']
+        try:
+            ydl_opts = {
+                'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best',
+                'quiet': True,
+                'noplaylist': True
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(video_url, download=False)
+                stream_url = info['url']
+                video_info = info
+        except Exception as e:
+            return f"<h3>Error: {str(e)}</h3>"
+    return render_template_string(HTML, video_url=video_url, stream_url=stream_url, video_info=video_info)
 
-@app.route('/groups', methods=['POST'])
-def groups():
-    token = request.form['token']
-    url = f"https://graph.facebook.com/v19.0/me/conversations?access_token={token}&fields=participants.limit(100),id,name"
-    res = requests.get(url).json()
-    if 'data' not in res:
-        return "<h3 style='color:red;text-align:center;'>Invalid token or no group data found.</h3>"
-    return render_template_string(HTML_GROUPS, groups=res['data'], token=token)
-
-@app.route('/group_chat', methods=['POST'])
-def group_chat():
-    token = request.form['token']
-    thread_id = request.form['thread_id']
-    group_name = request.form.get('group_name', 'Group Messages')
-    url = f"https://graph.facebook.com/v19.0/{thread_id}/messages?access_token={token}&fields=message,from,id,created_time&limit=3000"
-    res = requests.get(url).json()
-    return render_template_string(HTML_MESSAGES, messages=res.get('data', []), group_name=group_name)
+@app.route('/download', methods=['POST'])
+def download():
+    url = request.form['url']
+    ydl_opts = {
+        'format': 'bestvideo+bestaudio/best',
+        'outtmpl': 'video.%(ext)s'
+    }
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=True)
+        filename = ydl.prepare_filename(info)
+    return send_file(filename, as_attachment=True)
 
 if __name__ == '__main__':
-    os.system('clear' if os.name == 'posix' else 'cls')
-    print("Broken Nadeem Messenger Viewer is running at http://127.0.0.1:5000")
-    app.run(host='127.0.0.1', port=5000)
+    app.run(host='0.0.0.0', port=5000)
